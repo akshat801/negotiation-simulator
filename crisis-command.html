@@ -1,0 +1,1948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Crisis Command: The Negotiation</title>
+<!-- Display + body fonts (fall back to system fonts cleanly if offline) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     CRISIS COMMAND, THEME / DESIGN TOKENS
+     ============================================================ */
+  :root {
+    --bg-deep:      #0a0d13;   /* near-black neutral backdrop */
+    --bg-panel:     #12151d;   /* panel */
+    --bg-panel-2:   #161a24;   /* raised panel */
+    --bg-inset:     #0c0f16;   /* inset wells */
+    --border:       #222835;   /* subtle panel borders */
+    --border-hi:    #323a49;   /* raised borders */
+    --grid-line:    rgba(120, 140, 170, 0.025);
+
+    --text:         #dbe1ea;   /* primary text */
+    --text-dim:     #8892a3;   /* secondary text */
+    --text-faint:   #59626f;
+
+    --threat:       #f0556b;   /* threat red */
+    --threat-glow:  rgba(240, 85, 107, 0.16);
+    --trust:        #35d0a5;   /* trust teal-green */
+    --trust-glow:   rgba(53, 208, 165, 0.16);
+    --amber:        #f0b25a;   /* time / caution */
+    --amber-glow:   rgba(240, 178, 90, 0.16);
+    --accent:       #6ea8ff;   /* interactive blue */
+    --accent-glow:  rgba(110, 168, 255, 0.16);
+
+    --mono:    'JetBrains Mono', 'SFMono-Regular', 'Consolas', 'Courier New', monospace;
+    --sans:    'Inter', 'Segoe UI', 'Helvetica Neue', system-ui, sans-serif;
+    --display: 'Space Grotesk', 'Inter', 'Segoe UI', sans-serif;
+    --tech:    'Space Grotesk', 'JetBrains Mono', monospace;
+
+    --radius:  14px;
+    --shadow:  0 24px 60px -20px rgba(0,0,0,0.7);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+
+  body {
+    background:
+      radial-gradient(1200px 800px at 50% -20%, #151b28 0%, transparent 60%),
+      var(--bg-deep);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* faint tactical grid on the whole page */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 64px 64px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* static edge vignette for depth (no flicker, no scanlines) */
+  .crt-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    background: radial-gradient(140% 140% at 50% 45%, transparent 70%, rgba(0,0,0,0.35) 100%);
+  }
+
+  ::selection { background: rgba(86,149,214,0.35); color: #fff; }
+
+  /* scrollbars */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg-inset); }
+  ::-webkit-scrollbar-thumb { background: #22344c; border-radius: 6px; }
+  ::-webkit-scrollbar-thumb:hover { background: #2f4a68; }
+
+  /* ============================================================
+     LAYOUT SHELL
+     ============================================================ */
+  .app {
+    position: relative;
+    z-index: 2;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 22px 20px 60px;
+    min-height: 100%;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 18px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: rgba(18, 21, 29, 0.7);
+    backdrop-filter: blur(8px);
+    margin-bottom: 20px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: none;
+    border: none;
+    padding: 4px 6px;
+    margin: -4px -6px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+  }
+  .brand:hover { background: rgba(255,255,255,0.04); }
+  .brand:hover h1 { color: #fff; }
+  .brand .logo {
+    width: 38px; height: 38px;
+    display: grid; place-items: center;
+    border: 1px solid var(--border-hi);
+    border-radius: 9px;
+    color: var(--threat);
+    font-family: var(--tech);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    background: rgba(240,85,107,0.08);
+  }
+  .brand h1 {
+    font-family: var(--display);
+    font-size: 17px;
+    letter-spacing: 0.2px;
+    font-weight: 600;
+    line-height: 1;
+    color: #f4f7fb;
+    transition: color 0.15s;
+  }
+  .brand .sub {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .status-cluster {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .status-cluster::before {
+    content: "";
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--trust);
+    box-shadow: 0 0 0 3px var(--trust-glow);
+  }
+  .sound-toggle {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    width: 30px; height: 30px;
+    display: grid; place-items: center;
+    margin-left: 4px;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .sound-toggle:hover { border-color: var(--border-hi); color: var(--text); }
+  .sound-toggle.off { opacity: 0.6; }
+
+  /* ============================================================
+     MENU SCREEN
+     ============================================================ */
+  .menu-hero {
+    text-align: center;
+    padding: 56px 10px 40px;
+  }
+  .menu-hero h2 {
+    font-family: var(--display);
+    font-size: clamp(40px, 6vw, 68px);
+    letter-spacing: -1.5px;
+    font-weight: 600;
+    line-height: 1.02;
+    color: #f4f7fb;
+  }
+  .menu-hero .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    font-family: var(--mono);
+    color: var(--text-dim);
+    letter-spacing: 1.5px;
+    font-size: 11px;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: rgba(255,255,255,0.02);
+  }
+  .menu-hero .tag::before {
+    content: "";
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--threat);
+  }
+  .menu-hero p.brief {
+    max-width: 560px;
+    margin: 18px auto 0;
+    color: var(--text-dim);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .scenario-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    margin-top: 8px;
+  }
+  .scenario-card {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg-panel);
+    padding: 24px;
+    cursor: pointer;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  }
+  .scenario-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--border-hi);
+    background: var(--bg-panel-2);
+  }
+  .scenario-card .code {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+  .scenario-card h3 {
+    font-family: var(--display);
+    margin: 10px 0 4px;
+    font-size: 23px;
+    font-weight: 600;
+    letter-spacing: -0.4px;
+    color: #f4f7fb;
+  }
+  .scenario-card .type {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--amber);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+  }
+  .scenario-card p {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    flex: 1;
+  }
+  .scenario-card .profile-tags {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px;
+  }
+  .tag-pill {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    border: 1px solid var(--border-hi);
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+  /* starting-tension preview gauge on each card */
+  .card-gauge { margin-top: 14px; }
+  .card-gauge .cg-top {
+    display:flex; justify-content:space-between;
+    font-family: var(--mono); font-size: 9px; letter-spacing: 1px;
+    color: var(--text-faint); text-transform: uppercase; margin-bottom: 5px;
+  }
+  .card-gauge .cg-bar {
+    height: 6px; border-radius: 20px; background: var(--bg-inset);
+    border: 1px solid var(--border); overflow: hidden;
+  }
+  .card-gauge .cg-fill {
+    height: 100%; border-radius: 20px;
+    background: linear-gradient(90deg, var(--amber), var(--threat));
+    box-shadow: 0 0 8px var(--threat-glow);
+  }
+  .scenario-card .enter {
+    margin-top: 20px;
+    font-family: var(--sans);
+    font-size: 13px; font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.2px;
+    display: flex; align-items: center; gap: 6px;
+    transition: gap 0.18s;
+  }
+  .scenario-card:hover .enter { gap: 10px; }
+
+  /* ============================================================
+     GAME SCREEN
+     ============================================================ */
+  .game-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .game-layout { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg-panel);
+    padding: 20px;
+  }
+  .panel h4 {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* --- Dossier / stats sidebar --- */
+  .sidebar { display: flex; flex-direction: column; gap: 20px; position: sticky; top: 18px; }
+
+  .dossier .subject-name {
+    font-family: var(--display);
+    font-size: 25px;
+    font-weight: 600;
+    letter-spacing: -0.4px;
+    color: #f4f7fb;
+    margin-bottom: 3px;
+  }
+  .dossier .subject-role {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--amber);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .dossier .brief-text {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+  .dossier .profile-line {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    background: var(--bg-inset);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    line-height: 1.6;
+  }
+  .dossier .profile-line span { color: var(--text-dim); }
+
+  /* --- Meters --- */
+  .meter { margin-bottom: 16px; }
+  .meter:last-child { margin-bottom: 0; }
+  .meter .meter-top {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .meter .meter-label { color: var(--text-dim); text-transform: uppercase; }
+  .meter .goal-tag {
+    color: var(--trust); text-transform: none; letter-spacing: 0.5px;
+    font-size: 9px; margin-left: 6px; opacity: 0.8;
+  }
+  .meter .meter-val { font-size: 15px; font-weight: 700; }
+  .bar {
+    height: 16px;
+    background: var(--bg-inset);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+  }
+  /* faint tick marks every 10% for readability */
+  .bar::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image: repeating-linear-gradient(90deg,
+      transparent 0, transparent calc(10% - 1px),
+      rgba(255,255,255,0.06) calc(10% - 1px), rgba(255,255,255,0.06) 10%);
+    pointer-events: none; z-index: 3;
+  }
+  .bar .fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 20px;
+    transition: width 0.6s cubic-bezier(.2,.8,.2,1), background 0.3s;
+    position: relative;
+    z-index: 1;
+  }
+  .bar .fill.threat { background: linear-gradient(90deg, #8f2331, var(--threat)); }
+  .bar .fill.trust  { background: linear-gradient(90deg, #1f7a56, var(--trust)); }
+  .meter.threat .meter-val { color: var(--threat); }
+  .meter.trust  .meter-val { color: var(--trust); }
+
+  /* goal / threshold marker line on a bar (e.g. rapport 80%, threat 100% crit) */
+  .bar .marker {
+    position: absolute; top: -2px; bottom: -2px;
+    width: 2px; z-index: 4;
+    background: repeating-linear-gradient(180deg, #fff 0 3px, transparent 3px 6px);
+    opacity: 0.55;
+  }
+  .bar .marker.goal { background: repeating-linear-gradient(180deg, var(--trust) 0 3px, transparent 3px 6px); opacity: 0.85; }
+  .meter .goal-note {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 1px;
+    color: var(--text-faint); margin-top: 4px; text-transform: uppercase;
+  }
+  .meter.trust .goal-note b { color: var(--trust); }
+  .meter.threat .goal-note b { color: var(--threat); }
+
+  /* static danger treatment when threat is high (no loop) */
+  .bar .fill.threat.danger { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15); }
+  .meter.threat.is-danger .meter-val::after {
+    content: " ▲ CRITICAL"; font-size: 9px; letter-spacing: 1px;
+  }
+
+  /* floating +N / -N number that pops near a meter on change (one-shot) */
+  .meter { position: relative; }
+  .float-delta {
+    position: absolute; right: 4px; top: 20px;
+    font-family: var(--tech); font-size: 15px; font-weight: 700;
+    pointer-events: none; opacity: 0; z-index: 5;
+    animation: floatDelta 1.1s ease-out forwards;
+  }
+  .float-delta.good { color: var(--trust); }
+  .float-delta.bad  { color: var(--threat); }
+  @keyframes floatDelta {
+    0%   { opacity: 0; transform: translateY(6px); }
+    20%  { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-16px); }
+  }
+
+  /* --- Turn clock (shares the vitals panel) --- */
+  .clock-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border);
+  }
+  .clock-pips { display: flex; gap: 4px; flex-wrap: wrap; max-width: 60%; }
+  .pip {
+    width: 12px; height: 12px; border-radius: 3px;
+    background: var(--amber);
+    transition: background 0.3s, opacity 0.3s;
+  }
+  .pip.spent { background: #26313f; opacity: 0.6; }
+  .clock-num {
+    font-family: var(--tech); font-size: 28px; font-weight: 700; color: var(--amber);
+  }
+  .clock-num small { font-size: 13px; color: var(--text-dim); }
+
+  /* ============================================================
+     MAIN CONVERSATION COLUMN
+     ============================================================ */
+  .stage { display: flex; flex-direction: column; gap: 20px; }
+
+  .scene-header {
+    display:flex; align-items:center; justify-content: space-between; gap: 12px;
+  }
+  .scene-header .title-block h2 {
+    font-family: var(--display);
+    font-size: 25px; font-weight: 600; letter-spacing: -0.4px; color: #f4f7fb;
+  }
+  .scene-header .title-block .code {
+    font-family: var(--mono); font-size: 10.5px; color: var(--text-dim); letter-spacing: 1px;
+  }
+  .btn-abort {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
+    color: var(--text-dim);
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 8px 12px; border-radius: 6px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-abort:hover { color: var(--threat); border-color: var(--threat); }
+
+  /* --- Dialogue log --- */
+  .log-wrap { position: relative; }
+  .log {
+    height: 340px;
+    overflow-y: auto;
+    padding: 6px 14px 6px 6px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .msg { display: flex; gap: 10px; animation: fadeUp 0.35s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px);} to {opacity:1; transform:none;} }
+  .msg .avatar {
+    flex: 0 0 34px; width: 34px; height: 34px; border-radius: 8px;
+    display: grid; place-items: center;
+    font-family: var(--mono); font-size: 12px; font-weight: 700;
+    border: 1px solid var(--border);
+  }
+  .msg.suspect .avatar { color: var(--threat); border-color: rgba(229,73,94,0.5); background: rgba(229,73,94,0.06); }
+  .msg.negotiator .avatar { color: var(--accent); border-color: rgba(86,149,214,0.5); background: rgba(86,149,214,0.06); }
+  .msg.system .avatar { color: var(--amber); border-color: var(--amber); }
+  .msg .bubble { flex: 1; }
+  .msg .who {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--text-dim); margin-bottom: 3px;
+  }
+  .msg.suspect .body {
+    background: rgba(255,46,77,0.06);
+    border: 1px solid rgba(255,46,77,0.22);
+    border-radius: 4px 12px 12px 12px;
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+  .msg.negotiator .body {
+    background: rgba(78,160,255,0.07);
+    border: 1px solid rgba(78,160,255,0.22);
+    border-radius: 12px 4px 12px 12px;
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+  .msg.system .body {
+    font-style: italic;
+    color: var(--amber);
+    font-size: 13px;
+    padding: 4px 0;
+  }
+  .msg .reaction {
+    font-style: italic;
+    color: var(--text-dim);
+    font-size: 12.5px;
+    margin-bottom: 6px;
+  }
+  .typewriter-cursor::after {
+    content: "▋";
+    color: var(--threat);
+    opacity: 0.7;
+    margin-left: 2px;
+  }
+
+  /* stat delta flash chips inside log */
+  .delta-chips { display:flex; gap:6px; margin-top:6px; }
+  .delta-chip {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+    padding: 2px 7px; border-radius: 20px; border:1px solid var(--border);
+  }
+  .delta-chip.up-threat { color: var(--threat); border-color: rgba(255,46,77,0.4); }
+  .delta-chip.down-threat { color: var(--trust); border-color: rgba(34,255,167,0.35); }
+  .delta-chip.up-trust { color: var(--trust); border-color: rgba(34,255,167,0.4); }
+  .delta-chip.down-trust { color: var(--threat); border-color: rgba(255,46,77,0.35); }
+
+  /* --- Choices --- */
+  .choices { display: flex; flex-direction: column; gap: 10px; }
+  .choice {
+    text-align: left;
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 15px 16px;
+    background: var(--bg-panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 14.5px;
+    line-height: 1.55;
+    font-family: var(--sans);
+    transition: border-color 0.15s ease, background 0.15s ease;
+    width: 100%;
+  }
+  .choice:hover:not(:disabled), .choice:focus-visible:not(:disabled) {
+    border-color: var(--accent);
+    background: rgba(110,168,255,0.06);
+    outline: none;
+  }
+  .choice:disabled { opacity: 0.35; cursor: default; transform: none; }
+  /* number badge for keyboard selection */
+  .choice .hotkey {
+    flex: 0 0 auto;
+    width: 22px; height: 22px; border-radius: 6px;
+    display: grid; place-items: center;
+    font-family: var(--tech); font-size: 12px; font-weight: 700;
+    color: var(--text-dim);
+    background: var(--bg-inset);
+    border: 1px solid var(--border-hi);
+    margin-top: 1px;
+    transition: all 0.15s;
+  }
+  .choice:hover:not(:disabled) .hotkey,
+  .choice:focus-visible:not(:disabled) .hotkey {
+    color: #041020; background: var(--accent); border-color: var(--accent);
+  }
+  .choice .intent {
+    flex: 0 0 auto;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 8px; border-radius: 5px;
+    border: 1px solid var(--border-hi);
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+  .intent.empathy   { color: var(--trust);  border-color: rgba(34,255,167,0.4); }
+  .intent.authority { color: var(--threat); border-color: rgba(255,46,77,0.4); }
+  .intent.bluff     { color: var(--amber);  border-color: rgba(255,180,84,0.4); }
+  .intent.logic     { color: var(--accent); border-color: rgba(78,160,255,0.4); }
+  .intent.listen    { color: #b98cff;       border-color: rgba(185,140,255,0.4); }
+  .choice .ctext { flex: 1; }
+
+  /* choices arrive staggered so a fresh response set doesn't pop in as a hard block */
+  .choice { animation: choiceIn 0.34s cubic-bezier(.2,.7,.2,1) backwards; }
+  @keyframes choiceIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* selecting a response: highlight the pick, fade the rest, then the set slides out */
+  .choice.selected {
+    border-color: var(--accent);
+    background: rgba(110,168,255,0.10);
+    opacity: 1; /* stay bright even though the set is disabled during the beat */
+  }
+  .choice.selected .hotkey { color: #08111f; background: var(--accent); border-color: var(--accent); }
+  .choices.resolving .choice { pointer-events: none; cursor: default; }
+  .choices.resolving .choice:not(.selected) { opacity: 0.3; transition: opacity 0.25s ease; }
+  .choices.dismiss {
+    opacity: 0; transform: translateY(-6px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+
+  /* suspect "typing…" indicator shown during the beat before a reply lands */
+  .msg.suspect.typing .body {
+    display: inline-flex; align-items: center; gap: 5px; padding: 13px 15px;
+  }
+  .typing-dots { display: inline-flex; gap: 5px; }
+  .typing-dots span {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--threat); opacity: 0.4;
+    animation: typingDot 1.2s infinite ease-in-out;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.16s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.32s; }
+  @keyframes typingDot {
+    0%, 60%, 100% { transform: translateY(0);    opacity: 0.35; }
+    30%           { transform: translateY(-4px); opacity: 0.9;  }
+  }
+
+  .waiting-note {
+    font-family: var(--mono); font-size: 12px; color: var(--text-dim);
+    letter-spacing: 1px; text-align: center; padding: 18px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  /* panel header can hold a right-aligned hint */
+  .panel h4.with-hint { display:flex; align-items:center; justify-content:space-between; }
+  .h4-hint {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+    color: var(--text-faint); text-transform: none;
+  }
+  .h4-hint kbd {
+    font-family: var(--tech); font-size: 10px;
+    background: var(--bg-inset); border: 1px solid var(--border-hi);
+    border-radius: 4px; padding: 1px 5px; color: var(--text-dim);
+  }
+
+  /* skip-typewriter hint that appears while text is printing */
+  .skip-hint {
+    position: absolute; right: 16px; bottom: 12px; z-index: 6;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+    color: var(--text-faint); text-transform: uppercase;
+    background: rgba(6,10,17,0.85); border: 1px solid var(--border);
+    padding: 4px 9px; border-radius: 20px;
+    pointer-events: none; opacity: 0; transition: opacity 0.2s;
+  }
+  .skip-hint.show { opacity: 1; }
+  .log.printing { cursor: pointer; }
+
+  /* intent legend on the menu */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 10px 18px; justify-content: center;
+    margin: 22px auto 4px; max-width: 720px;
+  }
+  .legend .li {
+    display: flex; align-items: center; gap: 7px;
+    font-family: var(--mono); font-size: 11px; color: var(--text-dim); letter-spacing: 1px;
+  }
+  .legend .swatch { width: 10px; height: 10px; border-radius: 3px; }
+
+  /* end-screen action row + play-again button */
+  .end-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn.ghost {
+    border-color: var(--border-hi); color: var(--text-dim); background: transparent;
+  }
+  .btn.ghost:hover { border-color: var(--text); color: var(--text); background: rgba(255,255,255,0.04); box-shadow: none; }
+
+  /* ============================================================
+     END SCREENS
+     ============================================================ */
+  .end-screen {
+    text-align: center;
+    padding: 50px 24px 40px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .end-screen.win  { background: radial-gradient(700px 400px at 50% -10%, rgba(34,255,167,0.14), transparent 60%), var(--bg-panel); }
+  .end-screen.lose { background: radial-gradient(700px 400px at 50% -10%, rgba(255,46,77,0.16), transparent 60%), var(--bg-panel); }
+  .end-screen .verdict {
+    font-family: var(--mono);
+    letter-spacing: 2.5px;
+    font-size: 12px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .end-screen.win .verdict  { color: var(--trust); }
+  .end-screen.lose .verdict { color: var(--threat); }
+  .end-screen h2 {
+    font-family: var(--display);
+    font-size: clamp(34px, 5vw, 52px);
+    font-weight: 600;
+    letter-spacing: -1px;
+    margin-bottom: 18px;
+  }
+  .end-screen.win h2  { color: var(--trust); }
+  .end-screen.lose h2 { color: var(--threat); }
+  .end-screen .outcome-text {
+    max-width: 560px; margin: 0 auto 24px; color: var(--text); font-size: 15px;
+  }
+  .end-stats {
+    display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;
+    margin: 0 auto 28px; font-family: var(--mono);
+  }
+  .end-stat { text-align: center; }
+  .end-stat .n { font-size: 26px; font-weight: 700; }
+  .end-stat .l { font-size: 10px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+
+  .btn {
+    font-family: var(--sans); font-size: 14px; letter-spacing: 0.2px; font-weight: 600;
+    padding: 12px 26px; border-radius: 9px; cursor: pointer;
+    border: 1px solid var(--accent); color: #08111f;
+    background: var(--accent);
+    transition: all 0.15s;
+  }
+  .btn:hover { background: #86b9ff; border-color: #86b9ff; }
+
+  .hidden { display: none !important; }
+
+  /* subtle one-shot cue on a threat spike (restrained) */
+  @keyframes shake {
+    0%,100% { transform: translate(0,0); }
+    30% { transform: translate(-2px, 1px); }
+    60% { transform: translate(2px, -1px); }
+  }
+  .shake { animation: shake 0.25s ease; }
+
+  .flash-red::after {
+    content:""; position: fixed; inset:0; background: var(--threat);
+    opacity: 0; pointer-events:none; z-index: 9998;
+    animation: redFlash 0.45s ease;
+  }
+  @keyframes redFlash { 0%{opacity:0.12;} 100%{opacity:0;} }
+</style>
+</head>
+<body>
+  <div class="crt-overlay"></div>
+
+  <div class="app" id="app">
+
+    <!-- ============ TOP BAR (always visible) ============ -->
+    <div class="topbar">
+      <button class="brand" id="homeBtn" title="Back to menu" aria-label="Back to menu">
+        <div class="logo">CC</div>
+        <div>
+          <h1>Crisis Command</h1>
+          <div class="sub">Crisis Negotiation Unit</div>
+        </div>
+      </button>
+      <div class="status-cluster">
+        <span id="clockLabel">Ready</span>
+        <button class="sound-toggle" id="soundToggle" title="Toggle typing sound" aria-label="Toggle typing sound">🔊</button>
+      </div>
+    </div>
+
+    <!-- ============ MENU SCREEN ============ -->
+    <section id="menuScreen">
+      <div class="menu-hero">
+        <h2>Negotiation Simulator</h2>
+        <p class="brief">
+          Talk each person down. Build <b style="color:var(--trust)">Trust</b> up to 80%
+          before <b style="color:var(--threat)">Threat</b> reaches 100%.
+        </p>
+      </div>
+      <div class="scenario-grid" id="scenarioGrid"><!-- cards injected by JS --></div>
+    </section>
+
+    <!-- ============ GAME SCREEN ============ -->
+    <section id="gameScreen" class="hidden">
+      <div class="game-layout">
+
+        <!-- SIDEBAR: dossier + meters + clock -->
+        <aside class="sidebar">
+          <div class="panel dossier">
+            <div class="subject-name" id="dossierName"></div>
+            <div class="subject-role" id="dossierRole"></div>
+            <div class="brief-text" id="dossierBrief"></div>
+          </div>
+
+          <div class="panel">
+            <div class="meter threat">
+              <div class="meter-top">
+                <span class="meter-label">Threat</span>
+                <span class="meter-val" id="threatVal">0%</span>
+              </div>
+              <div class="bar"><div class="fill threat" id="threatFill"></div></div>
+            </div>
+            <div class="meter trust">
+              <div class="meter-top">
+                <span class="meter-label">Trust <span class="goal-tag">goal 80%</span></span>
+                <span class="meter-val" id="trustVal">0%</span>
+              </div>
+              <div class="bar">
+                <div class="fill trust" id="trustFill"></div>
+                <div class="marker goal" style="left:80%"></div>
+              </div>
+            </div>
+            <div class="clock-row">
+              <div class="clock-pips" id="clockPips"></div>
+              <div class="clock-num"><span id="turnsLeft">0</span><small>/<span id="turnsTotal">0</span></small></div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- MAIN STAGE -->
+        <main class="stage">
+          <div class="scene-header">
+            <div class="title-block">
+              <div class="code" id="sceneCode">SITREP</div>
+              <h2 id="sceneTitle"></h2>
+            </div>
+            <button class="btn-abort" id="abortBtn">Exit ✕</button>
+          </div>
+
+          <div class="panel log-wrap">
+            <div class="log" id="log"></div>
+            <div class="skip-hint" id="skipHint">Click to skip ▸</div>
+          </div>
+
+          <div class="panel">
+            <h4 class="with-hint">Your Response <span class="h4-hint">Keys <kbd>1</kbd>–<kbd>4</kbd></span></h4>
+            <div class="choices" id="choices"></div>
+          </div>
+        </main>
+      </div>
+    </section>
+
+    <!-- ============ END SCREEN ============ -->
+    <section id="endScreen" class="hidden">
+      <div class="end-screen" id="endBox">
+        <div class="verdict" id="endVerdict">RESOLUTION</div>
+        <h2 id="endTitle"></h2>
+        <p class="outcome-text" id="endText"></p>
+        <div class="end-stats" id="endStats"></div>
+        <div class="end-actions">
+          <button class="btn" id="retryBtn">↻ Retry</button>
+          <button class="btn ghost" id="returnBtn">◄ Menu</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+<script>
+/* ================================================================
+   CRISIS COMMAND: THE NEGOTIATION
+   Vanilla JS. Single-file. No dependencies.
+
+   ARCHITECTURE
+   ------------
+   - SCENARIOS: data-only object. Each scenario has a dossier,
+     starting stats, a turn budget, and a `nodes` map.
+   - Each NODE = one moment in the conversation:
+       { speaker line, optional reaction, and an array of choices }
+   - Each CHOICE mutates state (threat/rapport deltas), shows a
+     physical reaction + the suspect's reply, then routes to `next`.
+   - `next` may be a node id (string) OR a function(state) => id,
+     letting you branch on the live psychological state.
+   - Special next targets: "WIN", "LOSE:<reason>", or "END" (auto-
+     judged by thresholds). Turn budget & threat=100 also force ends.
+
+   To ADD A SCENARIO: append an entry to SCENARIOS with the same
+   shape. Nothing else needs to change.
+   ================================================================ */
+
+/* ------------------------------------------------------------------
+   INTENT LABELS, purely cosmetic tags shown on choice buttons.
+   ------------------------------------------------------------------ */
+const INTENT = {
+  EMPATHY:   { key: 'empathy',   label: 'Empathy' },
+  AUTHORITY: { key: 'authority', label: 'Assert Authority' },
+  BLUFF:     { key: 'bluff',     label: 'Bluff' },
+  LOGIC:     { key: 'logic',     label: 'Logic' },
+  LISTEN:    { key: 'listen',    label: 'Active Listening' },
+};
+
+/* ==================================================================
+   SCENARIO DATA
+   ================================================================== */
+const SCENARIOS = {
+
+  /* =============================================================
+     SCENARIO 1, THE CORNERED WOLF (Bank Robbery)
+     Marcus. Panicking first-timer. De-escalate + validate fear.
+     5 rounds. Memorable beat: his daughter Maya + the empty gun.
+     ============================================================= */
+  wolf: {
+    id: 'wolf',
+    title: 'The Cornered Wolf',
+    type: 'Bank Robbery, 3 Hostages',
+    subject: 'Marcus Doyle',
+    role: 'First-time robber, abandoned by his driver',
+    brief: 'A bank job gone wrong. The driver bolted. Marcus is shaking, holding three tellers he never meant to take.',
+    cardText: 'A panicking amateur, in over his head. Calm him before he does something he can\'t take back.',
+    start: { threat: 62, rapport: 15, turns: 6 },
+    openingLine: "Stay BACK! I've got three people in here and I did NOT sign up for this! The driver just, he LEFT me! So you tell me what happens now, because I've got nothing left!",
+    firstNode: 'w1',
+    nodes: {
+      w1: {
+        choices: [
+          { intent: INTENT.EMPATHY, text: "Nobody's coming through that door, Marcus. It's just you and me on this line. First thing, are you okay? You sound scared, not dangerous.",
+            threat: -12, rapport: +16, reaction: "A long, shaky exhale. The panic drops half a notch.",
+            reply: "...Scared. Yeah. I haven't slept in two days. I just wanted to fix one thing and I made everything a hundred times worse.", next: 'w2' },
+          { intent: INTENT.AUTHORITY, text: "This is the police. You have thirty seconds to put the weapon down before this goes very badly for you.",
+            threat: +18, rapport: -8, reaction: "You hear him spin toward the hostages, breath ragged.",
+            reply: "THIRTY SECONDS? You don't get to put a clock on me! One more word about seconds and I swear...", next: 'w2' },
+          { intent: INTENT.BLUFF, text: "Building's surrounded and we've got your driver in cuffs. It's over, the smart move is to walk out now.",
+            threat: +10, rapport: -4, reaction: "A bitter laugh cracks over the line.",
+            reply: "You got Danny? ...No. No, you're bluffing. Everybody's lied to me all day. Don't you start too.", next: 'w2' },
+        ],
+      },
+      w2: {
+        line: "I've got a daughter. She's eight. She thinks I'm at work right now. If she turns on the TV and sees this...",
+        choices: [
+          { intent: INTENT.EMPATHY, text: "Then let's make sure the story she hears is that her dad kept everyone safe. That's still possible, right now, if you talk to me.",
+            threat: -10, rapport: +16, reaction: "Silence. Then a small, wrecked sound.",
+            reply: "Kept everyone safe. God. Okay. Okay, what do you need me to do? Tell me and I'll do it.", next: 'w3' },
+          { intent: INTENT.LISTEN, text: "Tell me her name.",
+            threat: -8, rapport: +15, reaction: "His voice softens before he can stop it.",
+            reply: "Maya. Her name's Maya. She draws me these little dinosaurs and, sorry. Sorry. I'm coming apart here.", next: 'w3' },
+          { intent: INTENT.LOGIC, text: "Legally, nobody being hurt counts for a lot. A judge will notice that.",
+            threat: -3, rapport: +7, reaction: "He goes cold and wary.",
+            reply: "A judge. So you're already talking prison. That's the pep talk? Cool. Real reassuring.", next: 'w3' },
+        ],
+      },
+      w3: {
+        line: "One of the tellers is having a panic attack. She can't breathe right. I don't, I don't know what to do with that.",
+        choices: [
+          { intent: INTENT.EMPATHY, text: "You're worried about her. That tells me exactly who you are, Marcus. Let her walk out, for her, and because it's the right call for you.",
+            threat: -12, rapport: +17, reaction: "You hear him moving, gentler now, coaxing her up.",
+            reply: "...Go. Slow, out the front. She's out. She's out! I did that. That was me, right? That was a good thing?", next: 'w4' },
+          { intent: INTENT.BLUFF, text: "Send her out and I'll personally guarantee the DA drops every charge.",
+            threat: +9, rapport: -10, reaction: "He stiffens. He's heard promises before.",
+            reply: "Guarantee. You can't guarantee it'll rain in a storm. Don't hand me a lie and call it a gift.", next: 'w4' },
+          { intent: INTENT.AUTHORITY, text: "That's a medical emergency. Release her immediately, it's on you if something happens.",
+            threat: +15, rapport: -8, reaction: "Your tone flips the fear back on.",
+            reply: "'On me.' Everything's ON ME today. Maybe I just keep them ALL then, since it's all my fault anyway!", next: 'w4' },
+        ],
+      },
+      w4: {
+        line: "Okay. Say I let the other two go. Then it's just me, alone, in a room full of cops with guns. How does that end without me in a body bag?",
+        choices: [
+          { intent: INTENT.EMPATHY, text: "It ends with you walking out toward my voice, hands open, and me standing right there between you and everyone else. That's literally my job. I want you to see Maya again.",
+            threat: -10, rapport: +16, reaction: "A breath that's almost relief.",
+            reply: "You'd stand there. Yourself. Okay. The other two are coming out now. Please, don't make a liar out of you.", next: 'w5' },
+          { intent: INTENT.LISTEN, text: "What would make you feel safe enough to walk out? Tell me, and I'll build it for you.",
+            threat: -8, rapport: +14, reaction: "He actually thinks about it.",
+            reply: "Safe. I don't even remember safe. But... you. You talking. Keep talking to me and I think I can come out.", next: 'w5' },
+          { intent: INTENT.AUTHORITY, text: "It ends the way you make it end. Cooperate, or my team decides for you.",
+            threat: +16, rapport: -10, reaction: "He laughs, high and cracked.",
+            reply: "So your team's got a trigger and a stopwatch. Awesome. Real partnership we've got going here.", next: 'w5' },
+        ],
+      },
+      w5: {
+        line: "It's just me now. The gun's on the counter, and here's the joke: it's been empty the whole time. Never even loaded it. I'm so tired. Just... talk me through that door.",
+        choices: [
+          { intent: INTENT.EMPATHY, text: "Here's the door, Marcus: pick up nothing, walk toward my voice, hands where I can see them. I'll meet you halfway. Maya's dad comes home tonight, just not the way you planned. That's enough. That's everything.",
+            threat: -12, rapport: +18, reaction: "The line goes quiet... then you hear the deadbolt turn.",
+            reply: "Maya's dad comes home. Yeah. I'm coming out. Tell her, tell her I'm sorry I was late for dinner.",
+            next: (s) => s.rapport >= 80 ? 'WIN' : 'LOSE:timeout' },
+          { intent: INTENT.LISTEN, text: "You don't have to trust the system. Just trust me, for the next ninety seconds. That's all I'm asking. Walk toward my voice.",
+            threat: -8, rapport: +14, reaction: "A long pause, then steadier breathing.",
+            reply: "Ninety seconds. I can do ninety seconds. ...Okay. Here I come. Don't go anywhere.",
+            next: (s) => s.rapport >= 80 ? 'WIN' : 'LOSE:timeout' },
+          { intent: INTENT.AUTHORITY, text: "Final warning. Come out now with your hands up, or we breach.",
+            threat: +18, rapport: -10, reaction: "The word 'breach' detonates in the room.",
+            reply: "BREACH? With people in here? You want a body count on the news for my kid to watch?! GET BACK!",
+            next: 'LOSE:breach' },
+        ],
+      },
+    },
+    endings: {
+      WIN: {
+        verdict: 'PEACEFUL SURRENDER',
+        title: 'Everyone Walks Out',
+        text: 'Marcus steps into the light, empty hands up, empty gun left on the counter. Three hostages, all unharmed. He is crying as they cuff him, but he is alive, and so is everyone else. Somewhere across town, Maya still thinks her dad was just late for dinner.'
+      },
+      'LOSE:breach': {
+        verdict: 'TACTICAL BREACH',
+        title: 'It Went Loud',
+        text: 'You reached for the badge instead of the man. Marcus’s panic hit the ceiling, the team went in, and a robbery that never had to have a body count suddenly did. Fear was the trigger, and you pulled it.'
+      },
+      'LOSE:timeout': {
+        verdict: 'TRUST NEVER LANDED',
+        title: 'The Line Went Dead',
+        text: 'You got close, but never quite reached the scared father under all that panic. The trust ran out before he could bring himself to believe there was a way out, and he stopped believing you were it.'
+      },
+    },
+  },
+
+  /* =============================================================
+     SCENARIO 2, THE GRIEVANCE (Corporate Standoff)
+     Elena. Narcissistic injury, brilliant, sees through scripts.
+     5 rounds. Memorable beat: she doesn't want to hurt anyone, she wants the record straight.
+     ============================================================= */
+  grievance: {
+    id: 'grievance',
+    title: 'The Grievance',
+    type: 'Corporate Standoff, CEO Hostage',
+    subject: 'Elena Vance',
+    role: 'Fired senior software engineer',
+    brief: 'Fired at 9 a.m. By noon she had sealed herself in the server room with the CEO. She controls the building, and she is smarter than everyone outside it.',
+    cardText: 'A genius who was erased. She doesn’t want a body, she wants to be heard. One scripted line and she’ll take you apart.',
+    start: { threat: 52, rapport: 15, turns: 6 },
+    openingLine: "Let me save us both time. I’ve read the negotiation playbook, probably a better edition than they handed you. So skip the mirroring and the ‘help me understand.’ What do you actually want? And don’t lie. I’ll know.",
+    firstNode: 'e1',
+    nodes: {
+      e1: {
+        choices: [
+          { intent: INTENT.LISTEN, text: "Fair. No script. Honestly? I want to hear what happened today from the one person here smart enough to explain it right.",
+            threat: -8, rapport: +16, reaction: "A pause. She wasn't braced for candor.",
+            reply: "...Huh. That’s not on page one. Fine. What happened is I built the thing this company runs on, and they walked me out between two guards like I’d stolen a stapler.", next: 'e2' },
+          { intent: INTENT.AUTHORITY, text: "What I want is that door open. You're committing multiple felonies, ma'am.",
+            threat: +16, rapport: -12, reaction: "You can hear her smile. It is not warm.",
+            reply: "‘Ma’am.’ ‘Felonies.’ There it is, page one, first line. This is going to be so boring for both of us.", next: 'e2' },
+          { intent: INTENT.EMPATHY, text: "I can only imagine how upsetting today must have been for you.",
+            threat: +6, rapport: -8, reaction: "A short, cutting laugh.",
+            reply: "Don’t perform feelings at me. I’m not upset. I’m precise. If you can’t tell the difference, they should send someone who can.", next: 'e2' },
+        ],
+      },
+      e2: {
+        line: "Eleven years. I architected their entire platform. And in my exit interview the VP called me, direct quote, ‘a resource we’re optimizing.’ A resource. Optimize this.",
+        choices: [
+          { intent: INTENT.LISTEN, text: "So they turned the person who built everything into a line item. What did that word, 'a resource', actually erase?",
+            threat: -8, rapport: +17, reaction: "She leans in. Finally, someone tracking the real point.",
+            reply: "The failover system holding their stock price up tonight? Mine. The one that ran clean through three outages? Mine. They fired me and they don’t even know what I was.", next: 'e3' },
+          { intent: INTENT.EMPATHY, text: "That's genuinely unfair, and your anger is completely valid.",
+            threat: +2, rapport: +4, reaction: "She narrows her eyes at the therapy-speak.",
+            reply: "‘Valid.’ You’re agreeing awfully fast. Are you actually listening, or just waiting for me to tire myself out?", next: 'e3' },
+          { intent: INTENT.LOGIC, text: "However they treated you, locking a man in a room legally undoes all of it.",
+            threat: +14, rapport: -10, reaction: "Her voice flattens into contempt.",
+            reply: "‘A man.’ You mean the CEO. Funny how quickly you found HIS humanity and skipped right past mine.", next: 'e3' },
+        ],
+      },
+      e3: {
+        line: "Here’s what nobody’s asking, so I’ll say it plainly: I don’t want to hurt him. I had four hours alone with the servers and a very bad mood, and I didn’t. What I want is the record. My words, before they get rewritten into ‘disgruntled woman snaps.’",
+        choices: [
+          { intent: INTENT.LISTEN, text: "So this was never a hostage situation. It's a witness statement, and you're terrified that the second that door opens, you lose control of your own story. Did I get that right?",
+            threat: -10, rapport: +18, reaction: "Dead silence. You just said the thing she couldn't.",
+            reply: "...Yes. Exactly that. Nobody has said it back correctly until right now. Maybe you’re not the intern of negotiators after all.", next: 'e4' },
+          { intent: INTENT.BLUFF, text: "Between us, half that company knows they lost their best person. I've heard people say it.",
+            threat: +8, rapport: -10, reaction: "She catches the manipulation in mid-air.",
+            reply: "You ‘heard.’ You’re feeding me a line you think softens me up. I can see the seams. That’s beneath both of us.", next: 'e4' },
+          { intent: INTENT.AUTHORITY, text: "Whatever your point was, you've made it. Open the door now.",
+            threat: +14, rapport: -10, reaction: "Her walls go straight back up.",
+            reply: "‘You’ve made it.’ Dismissed again, right on cue. And you were doing so well.", next: 'e4' },
+        ],
+      },
+      e4: {
+        line: "So say I want a statement on the permanent record. Can you actually deliver that, or is it another door-opening lie? Be specific. Vague is how I know I’m being handled.",
+        choices: [
+          { intent: INTENT.LISTEN, text: "Specific: I enter your written statement into the official incident record right now. Timestamped, permanent, un-editable. Your lawyer can hold me to it in court. That part I control. We start there.",
+            threat: -10, rapport: +17, reaction: "She actually weighs it. You offered a real thing, not a fantasy.",
+            reply: "Permanent. Admissible. Mine. That’s... genuinely clever. Keep going. You have my attention, and that is rare.", next: 'e5' },
+          { intent: INTENT.BLUFF, text: "Absolutely, press conference, live cameras, the whole thing. Whatever you want.",
+            threat: +12, rapport: -12, reaction: "She scoffs, almost pityingly.",
+            reply: "Live cameras for a hostage-taker. You’d promise me the moon on a string. We’re done pretending you’re honest.", next: 'e5' },
+          { intent: INTENT.EMPATHY, text: "I promise people will understand, once they hear your side of it.",
+            threat: +4, rapport: -2, reaction: "She shakes her head.",
+            reply: "You can’t promise how strangers will feel. Stop writing checks reality won’t cash.", next: 'e5' },
+        ],
+      },
+      e5: {
+        line: "You’ve been... unexpectedly competent. Last question, and it’s the real one: the moment those maglocks click open, what stops your people from erasing me from my own story anyway?",
+        choices: [
+          { intent: INTENT.LISTEN, text: "Nothing, except that your statement is already on the permanent record. Your version exists now, outside anyone's control, including mine. Opening that door doesn't erase you. It's the first line of the account where you were finally heard. I heard you, Elena.",
+            threat: -14, rapport: +18, reaction: "She looks at the lock panel for a long moment, then exhales.",
+            reply: "You did. God help me, you actually did. He comes out first. Then me, hands visible. Let’s do this correctly, on the record.",
+            next: (s) => s.rapport >= 80 ? 'WIN' : 'LOSE:timeout' },
+          { intent: INTENT.EMPATHY, text: "Because you have my personal word that you'll be treated with respect.",
+            threat: +6, rapport: -8, reaction: "She sighs, disappointed at the very finish line.",
+            reply: "Your ‘personal word.’ After all that, you reach for the one line the manual guarantees. You didn’t understand me at all.",
+            next: (s) => s.rapport >= 80 ? 'WIN' : 'LOSE:timeout' },
+          { intent: INTENT.AUTHORITY, text: "Because you're out of options and you know it. This is the only rational move left.",
+            threat: +16, rapport: -12, reaction: "Her expression ices over completely.",
+            reply: "‘Out of options.’ There’s the badge, right at the finish line. You were never on my side. Then I keep the only leverage I have.",
+            next: 'LOSE:lockdown' },
+        ],
+      },
+    },
+    endings: {
+      WIN: {
+        verdict: 'PEACEFUL SURRENDER',
+        title: 'On The Record',
+        text: 'The maglocks disengage. The CEO walks free; Elena follows, hands visible, her statement filed in her own precise words. At the threshold she pauses: “For what it’s worth, you listened. He never did.” You didn’t defeat her. You witnessed her. That is what worked.'
+      },
+      'LOSE:lockdown': {
+        verdict: 'NEGOTIATION COLLAPSED',
+        title: 'She Cut The Line',
+        text: 'One “ma’am” too many. Elena decided you were just another person managing her, killed the comms, dropped the building network, and dug in. You handed the smartest person in the building a reason to stop trusting you.'
+      },
+      'LOSE:timeout': {
+        verdict: 'NEVER REACHED HER',
+        title: 'Heard, Not Understood',
+        text: 'You circled the grievance but never spoke to the person underneath it. The clock ran out with the doors still sealed and Elena more certain than ever that nobody was truly listening.'
+      },
+    },
+  },
+
+  /* =============================================================
+     SCENARIO 3, THE DESPERATE FATHER (Domestic Barricade)
+     David. Depressed, at-risk, child present. Pure empathy.
+     5 rounds. Memorable beat: the fridge drawing + dinosaur tour.
+     ============================================================= */
+  father: {
+    id: 'father',
+    title: 'The Desperate Father',
+    type: 'Domestic Barricade, Child Present',
+    subject: 'David Reyes',
+    role: 'Father, hours after losing custody',
+    brief: 'After losing custody, David barricaded himself inside with his 7-year-old son, Leo. Armed, exhausted, and out of hope. As delicate as it gets.',
+    cardText: 'A broken father at the end of his rope, his son beside him. Logic kills here. Only real warmth reaches him.',
+    start: { threat: 60, rapport: 14, turns: 6 },
+    openingLine: "(quiet) I’m not opening the door. Don’t send anyone up. It’s just me and Leo, and that’s how it stays. He thinks it’s a sleepover. Let him keep thinking that. Please.",
+    firstNode: 'd1',
+    nodes: {
+      d1: {
+        choices: [
+          { intent: INTENT.EMPATHY, text: "Okay. Nobody's coming to the door. I'm not here to take anything from you, David, I just want to talk to Leo's dad. Is he okay in there?",
+            threat: -10, rapport: +16, reaction: "A long, unsteady breath.",
+            reply: "(softer) He’s okay. Got his dinosaur show on. He doesn’t know there’s police outside, he just knows Dad’s home. That’s the part that’s killing me.", next: 'd2' },
+          { intent: INTENT.AUTHORITY, text: "David, open the door. Every minute you drag this out makes it worse for you.",
+            threat: +18, rapport: -12, reaction: "His voice cracks into something jagged.",
+            reply: "WORSE? They already took him. There’s nothing left worse. There’s nothing left for you to threaten me with. Nothing.", next: 'd2' },
+          { intent: INTENT.LOGIC, text: "Barricading yourself in won't change the custody order. Let's be reasonable.",
+            threat: +16, rapport: -10, reaction: "A hollow, broken laugh.",
+            reply: "‘Reasonable.’ I was reasonable for a whole year. It got me a locked door and an empty side of the bed. Reason’s done.", next: 'd2' },
+        ],
+      },
+      d2: {
+        line: "(breaking) I was a GOOD dad. One bad week, lost my job, lost my temper once, in front of exactly the wrong person, and now I’m the monster in a court file.",
+        choices: [
+          { intent: INTENT.EMPATHY, text: "I don't hear a monster. I hear a father having the worst day of his life. One bad week doesn't erase every bedtime and every scraped knee. Leo knows who you are.",
+            threat: -12, rapport: +17, reaction: "He’s crying now, quietly.",
+            reply: "(crying) He drew me on the fridge. Stick-figure me, holding his hand. I keep looking at it and I can’t, I can’t breathe.", next: 'd3' },
+          { intent: INTENT.LISTEN, text: "Tell me about him. What's Leo into right now?",
+            threat: -8, rapport: +15, reaction: "His voice softens despite everything.",
+            reply: "Dinosaurs. He can name forty of them. Corrects MY pronunciation. He’s the best thing I ever did. The only good thing.", next: 'd3' },
+          { intent: INTENT.LOGIC, text: "The court ruled on circumstances, not on your character. That's an important distinction.",
+            threat: +12, rapport: -8, reaction: "He shuts down instantly.",
+            reply: "Don’t turn my son into a ‘distinction.’ You sound exactly like the lawyer who did this to us.", next: 'd3' },
+        ],
+      },
+      d3: {
+        line: "(barely audible) I keep thinking he’d be better off without me around to keep ruining things. All of them would.",
+        choices: [
+          { intent: INTENT.EMPATHY, text: "David, listen to me carefully. Leo does not need a perfect dad. He needs HIS dad, the one on the fridge, holding his hand. There is no version of his life that's better without you in it. Not one.",
+            threat: -13, rapport: +18, reaction: "A raw sob, then a small, wet breath. He’s still here.",
+            reply: "(whisper) You really think he still needs me? After all this? I’m just... I’m so tired of feeling like this.", next: 'd4' },
+          { intent: INTENT.LISTEN, text: "That's a heavy thing to be carrying alone. You're not alone right now, I've got you, and I'm not going anywhere. Say all of it.",
+            threat: -8, rapport: +14, reaction: "His breathing steadies a fraction.",
+            reply: "This morning I made him pancakes. Now there’s police outside my house. How does that even happen? How?", next: 'd4' },
+          { intent: INTENT.AUTHORITY, text: "Stop that kind of talk right now and focus on the consequences here.",
+            threat: +16, rapport: -12, reaction: "The command slams the door you’d just cracked open.",
+            reply: "‘Stop talking.’ You just want me quiet and easy for you. You don’t care what’s happening in my head. Nobody does.", next: 'd4' },
+        ],
+      },
+      d4: {
+        line: "There’s a gun on the floor by my foot. I set it there this morning, before he woke up, when I was thinking about... I can’t stop looking at it.",
+        choices: [
+          { intent: INTENT.EMPATHY, text: "Thank you for telling me that, that took real courage. You don't have to come out yet. Just do one thing for Leo: slide it into the other room, away from both of you. Make him safe. That's all I'm asking.",
+            threat: -14, rapport: +17, reaction: "A long silence, then the sound of something heavy sliding across the floor.",
+            reply: "(exhale) It’s in the hall. Away from him. Away from me. Okay. I did that. Oh God, okay.", next: 'd5' },
+          { intent: INTENT.LISTEN, text: "I'm glad you trusted me with that. Where's Leo right now, exactly?",
+            threat: -6, rapport: +12, reaction: "He grounds himself in the concrete question.",
+            reply: "Couch. Ten feet away. Blanket, juice box, dinosaurs. He’s safe. I’d never, he’s safe. I need him to be safe.", next: 'd5' },
+          { intent: INTENT.AUTHORITY, text: "There is a firearm near a child. Secure that weapon immediately. That is non-negotiable.",
+            threat: +18, rapport: -14, reaction: "Panic spikes, your urgency reads as the raid closing in.",
+            reply: "‘Non-negotiable.’ You’re sending them in, aren’t you. Don’t. DON’T. Not with him in the room. You’ll make it worse!", next: 'd5' },
+        ],
+      },
+      d5: {
+        line: "If I open that door, they drag me off in cuffs and that’s the last thing Leo ever sees of me. That’s the memory he keeps forever. I can’t do that to him. I won’t.",
+        choices: [
+          { intent: INTENT.EMPATHY, text: "Then we don't do that. Here's the plan: a friendly officer gives Leo a 'dinosaur tour' of the patrol car, lights and everything, before you ever step out. He never sees a cuff. He remembers the day his dad kept him safe. We protect that memory together. Open the door. I've got both of you.",
+            threat: -14, rapport: +18, reaction: "A wet, disbelieving laugh, then the deadbolt turns. A small hand is wrapped around two of his fingers.",
+            reply: "(whisper) A dinosaur tour. He’d love that. Okay. We’re coming out. Leo, hold Daddy’s hand, buddy. I love you, kiddo. ...Thank you for staying on the line.",
+            next: (s) => s.rapport >= 80 ? 'WIN' : 'LOSE:timeout' },
+          { intent: INTENT.LISTEN, text: "You did the right thing today, every choice was for Leo. Take a breath, hold his hand, and walk out when you're ready. No rush. I'm not going anywhere.",
+            threat: -8, rapport: +14, reaction: "He gathers himself at the threshold.",
+            reply: "No rush. One breath. Leo, you ready for ice cream, buddy? ...We’re coming out. We’re really coming out.",
+            next: (s) => s.rapport >= 80 ? 'WIN' : 'LOSE:timeout' },
+          { intent: INTENT.AUTHORITY, text: "Good. Open up, hands where we can see them, follow instructions exactly. Now.",
+            threat: +16, rapport: -12, reaction: "The barked commands shatter the moment at the worst possible second.",
+            reply: "(backing away) ‘Hands where we can see them.’ A takedown. With my son right here. I can’t let him see that, GET BACK!",
+            next: 'LOSE:tragedy' },
+        ],
+      },
+    },
+    endings: {
+      WIN: {
+        verdict: 'PEACEFUL SURRENDER',
+        title: 'Both Of Them, Safe',
+        text: 'The door opens. Leo gets his dinosaur tour, giggling in the front seat, while David is quietly walked to a crisis counselor, not a cell. No one was harmed. You didn’t just save two lives tonight; you protected a little boy’s memory of his father. That’s the whole job.'
+      },
+      'LOSE:tragedy': {
+        verdict: 'CRITICAL FAILURE',
+        title: 'The Wrong Words',
+        text: 'The hard command pushed David past the edge you’d spent so long pulling him back from, with his son in the room. There was no margin for the badge here. Empathy was the only key that fit this lock, and for one line, you set it down.'
+      },
+      'LOSE:timeout': {
+        verdict: 'SO CLOSE',
+        title: 'The Thread Frayed',
+        text: 'You reached him, just not all the way. As despair and exhaustion closed in and the clock ran out, the fragile thread of trust frayed before he could bring himself to step through the door.'
+      },
+    },
+  },
+
+};
+
+/* ==================================================================
+   GAME STATE + ENGINE
+   ================================================================== */
+const State = {
+  scenario: null,   // active scenario object
+  nodeId: null,     // current node id
+  threat: 0,
+  rapport: 0,
+  turnsTotal: 0,
+  turnsLeft: 0,
+  ended: false,
+};
+
+/* ---- Element cache ---- */
+const el = (id) => document.getElementById(id);
+const dom = {
+  menu: el('menuScreen'),
+  game: el('gameScreen'),
+  end:  el('endScreen'),
+  grid: el('scenarioGrid'),
+  clockLabel: el('clockLabel'),
+  // dossier
+  dName: el('dossierName'), dRole: el('dossierRole'),
+  dBrief: el('dossierBrief'),
+  // meters
+  threatVal: el('threatVal'), threatFill: el('threatFill'),
+  trustVal: el('trustVal'), trustFill: el('trustFill'),
+  // clock
+  pips: el('clockPips'), turnsLeft: el('turnsLeft'), turnsTotal: el('turnsTotal'),
+  // scene
+  sceneCode: el('sceneCode'), sceneTitle: el('sceneTitle'),
+  log: el('log'), choices: el('choices'),
+  // end
+  endBox: el('endBox'), endVerdict: el('endVerdict'),
+  endTitle: el('endTitle'), endText: el('endText'), endStats: el('endStats'),
+  // buttons
+  abort: el('abortBtn'), ret: el('returnBtn'), retry: el('retryBtn'), home: el('homeBtn'),
+  app: el('app'),
+  skipHint: el('skipHint'),
+  soundToggle: el('soundToggle'),
+  // meters (for floating deltas)
+  threatMeter: document.querySelector('.meter.threat'),
+  trustMeter: document.querySelector('.meter.trust'),
+};
+
+/* ------------------------------------------------------------------
+   MENU: render one card per scenario
+   ------------------------------------------------------------------ */
+function renderMenu() {
+  dom.grid.innerHTML = '';
+  Object.values(SCENARIOS).forEach((sc) => {
+    const card = document.createElement('div');
+    card.className = 'scenario-card';
+    card.innerHTML = `
+      <div class="type">${sc.type}</div>
+      <h3>${sc.title}</h3>
+      <p>${sc.cardText}</p>
+      <div class="enter">Begin →</div>
+    `;
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.addEventListener('click', () => startScenario(sc.id));
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startScenario(sc.id); }
+    });
+    dom.grid.appendChild(card);
+  });
+}
+
+/* ------------------------------------------------------------------
+   START a scenario: init state, render dossier, open first node
+   ------------------------------------------------------------------ */
+function startScenario(id) {
+  const sc = SCENARIOS[id];
+  State.scenario = sc;
+  State.threat  = sc.start.threat;
+  State.rapport = sc.start.rapport;
+  State.turnsTotal = sc.start.turns;
+  State.turnsLeft  = sc.start.turns;
+  State.nodeId = sc.firstNode;
+  State.ended = false;
+  State.currentChoices = null; // guard against stale keyboard input
+
+  // clear any playback left running from a previous call (e.g. quick retry mid-beat)
+  clearTimeout(_twTimer);
+  _twFinish = null;
+  if (_pendingReply) { clearTimeout(_pendingReply.timer); _pendingReply = null; }
+
+  ensureAudio(); // this runs from a card/retry click, so sound is unlocked
+
+  // dossier
+  dom.dName.textContent = sc.subject;
+  dom.dRole.textContent = sc.role;
+  dom.dBrief.textContent = sc.brief;
+  // scene
+  dom.sceneCode.textContent = sc.type;
+  dom.sceneTitle.textContent = sc.title;
+  dom.turnsTotal.textContent = sc.start.turns;
+
+  // reset log
+  dom.log.innerHTML = '';
+  dom.choices.innerHTML = '';
+
+  // screens
+  showScreen('game');
+  updateMeters(true);
+  updateClock();
+
+  // system sitrep + opening suspect line
+  State._resolving = false;
+  addSystemMsg(`You're now on the phone with ${sc.subject}.`);
+  suspectSpeaks(sc.openingLine, null, () => {
+    renderNode(sc.firstNode);
+  });
+}
+
+/* ------------------------------------------------------------------
+   RENDER a node: show its (optional) suspect line, then choices
+   ------------------------------------------------------------------ */
+function renderNode(nodeId) {
+  State.nodeId = nodeId;
+  const node = State.scenario.nodes[nodeId];
+  if (!node) { console.error('Missing node', nodeId); return; }
+
+  const showChoices = () => renderChoices(node.choices);
+
+  if (node.line) {
+    suspectSpeaks(node.line, null, showChoices);
+  } else {
+    showChoices();
+  }
+}
+
+/* ------------------------------------------------------------------
+   RENDER choice buttons for the current node
+   ------------------------------------------------------------------ */
+function renderChoices(choices) {
+  dom.choices.innerHTML = '';
+  dom.choices.classList.remove('resolving', 'dismiss'); // fresh, interactive set
+  // Shuffle so the "right" answer isn't always in the same slot, and
+  // hide the intent tag so players read the words, not the label.
+  const shuffled = shuffle(choices);
+  State.currentChoices = shuffled; // keyboard selection follows displayed order
+  shuffled.forEach((choice, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice';
+    btn.style.animationDelay = (i * 0.06) + 's'; // gentle stagger-in
+    btn.innerHTML = `
+      <span class="hotkey">${i + 1}</span>
+      <span class="ctext">${choice.text}</span>
+    `;
+    btn.addEventListener('click', () => selectChoice(choice, btn));
+    dom.choices.appendChild(btn);
+  });
+}
+
+/* Fisher-Yates shuffle on a copy (leaves the source data untouched). */
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* ------------------------------------------------------------------
+   SELECT a choice: log player line, apply deltas, show reaction +
+   reply, spend a turn, then evaluate routing / end conditions.
+   ------------------------------------------------------------------ */
+function selectChoice(choice, btn) {
+  if (State.ended || State._resolving) return;
+  State._resolving = true;
+
+  // lock choices during the beat, mark the pick, then ease the set out
+  disableChoices();
+  dismissChoices(btn);
+
+  // 1) echo the negotiator's line
+  addNegotiatorMsg(choice.text);
+
+  // 2) apply psychological deltas
+  const dThreat  = choice.threat  || 0;
+  const dRapport = choice.rapport || 0;
+  applyDeltas(dThreat, dRapport);
+
+  // 3) spend a turn
+  State.turnsLeft = Math.max(0, State.turnsLeft - 1);
+  updateClock();
+
+  // 4) big threat spike -> feedback juice
+  if (dThreat >= 14) triggerThreatSpike();
+
+  // 5) resolve where we go next AFTER the suspect replies (with a natural beat)
+  suspectSpeaks(choice.reply, choice.reaction, () => {
+    State._resolving = false;
+    // Terminal check: threat maxed or turns exhausted override routing.
+    if (State.threat >= 100) { return endGame(forcedLoss('breach')); }
+
+    // Resolve the choice's declared next target.
+    let next = typeof choice.next === 'function' ? choice.next({ ...State }) : choice.next;
+
+    // Out of turns and not already routed to a win -> deteriorate.
+    if (State.turnsLeft <= 0 && next !== 'WIN') {
+      return endGame(forcedLoss('timeout'));
+    }
+
+    if (next === 'WIN')  return endGame('WIN');
+    if (typeof next === 'string' && next.startsWith('LOSE:')) return endGame(next);
+
+    // Otherwise advance to the next dialogue node.
+    renderNode(next);
+  });
+}
+
+/* Highlight the chosen response, dim the rest, then slide the set away. */
+function dismissChoices(btn) {
+  if (btn) btn.classList.add('selected');
+  dom.choices.classList.add('resolving');
+  setTimeout(() => dom.choices.classList.add('dismiss'), 240);
+}
+
+/* Pick the scenario's loss ending matching a reason, else first loss. */
+function forcedLoss(reason) {
+  const ends = State.scenario.endings;
+  const wantTimeout = reason === 'timeout';
+  // Prefer an exact-ish match on the reason keyword.
+  const keys = Object.keys(ends).filter(k => k.startsWith('LOSE:'));
+  if (wantTimeout) {
+    const t = keys.find(k => k.includes('timeout'));
+    if (t) return t;
+  } else {
+    const b = keys.find(k => !k.includes('timeout'));
+    if (b) return b;
+  }
+  return keys[0] || 'LOSE:timeout';
+}
+
+/* ------------------------------------------------------------------
+   APPLY stat deltas with clamping + animated meter updates.
+   ------------------------------------------------------------------ */
+function applyDeltas(dThreat, dRapport) {
+  State.threat  = clamp(State.threat  + dThreat, 0, 100);
+  State.rapport = clamp(State.rapport + dRapport, 0, 100);
+  updateMeters();
+  // floating numbers on the meters for instant feedback.
+  // For threat, a rise is BAD (red); for rapport, a rise is GOOD (green).
+  if (dThreat)  floatDelta(dom.threatMeter, dThreat,  dThreat < 0);
+  if (dRapport) floatDelta(dom.trustMeter,  dRapport, dRapport > 0);
+  // little delta chips appended to the last suspect message happen in addSuspectMsg
+  State._lastDelta = { dThreat, dRapport };
+}
+
+/* Pop a transient +N / -N number above a meter. `good` picks the color. */
+function floatDelta(meterEl, value, good) {
+  if (!meterEl) return;
+  const f = document.createElement('div');
+  f.className = 'float-delta ' + (good ? 'good' : 'bad');
+  f.textContent = (value > 0 ? '+' : '') + value;
+  meterEl.appendChild(f);
+  setTimeout(() => f.remove(), 1200);
+}
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+/* ------------------------------------------------------------------
+   METER + CLOCK rendering
+   ------------------------------------------------------------------ */
+function updateMeters(instant) {
+  dom.threatVal.textContent = Math.round(State.threat) + '%';
+  dom.trustVal.textContent  = Math.round(State.rapport) + '%';
+  dom.threatFill.style.width = State.threat + '%';
+  dom.trustFill.style.width  = State.rapport + '%';
+
+  // danger styling when threat high (static, no loop)
+  const danger = State.threat >= 75;
+  dom.threatFill.classList.toggle('danger', danger);
+  if (dom.threatMeter) dom.threatMeter.classList.toggle('is-danger', danger);
+}
+
+function updateClock() {
+  dom.turnsLeft.textContent = State.turnsLeft;
+  // pips
+  dom.pips.innerHTML = '';
+  for (let i = 0; i < State.turnsTotal; i++) {
+    const pip = document.createElement('span');
+    pip.className = 'pip' + (i >= State.turnsLeft ? ' spent' : '');
+    dom.pips.appendChild(pip);
+  }
+  // topbar label
+  dom.clockLabel.textContent = `Turns left  ${State.turnsLeft} / ${State.turnsTotal}`;
+}
+
+/* ------------------------------------------------------------------
+   MESSAGE RENDERERS (log)
+   ------------------------------------------------------------------ */
+function addSystemMsg(text) {
+  const m = document.createElement('div');
+  m.className = 'msg system';
+  m.innerHTML = `<div class="avatar">SYS</div>
+    <div class="bubble"><div class="body">${text}</div></div>`;
+  dom.log.appendChild(m);
+  scrollLog();
+}
+
+function addNegotiatorMsg(text) {
+  const m = document.createElement('div');
+  m.className = 'msg negotiator';
+  m.innerHTML = `<div class="avatar">YOU</div>
+    <div class="bubble">
+      <div class="who">Negotiator</div>
+      <div class="body">${text}</div>
+    </div>`;
+  dom.log.appendChild(m);
+  scrollLog();
+}
+
+/*
+  Suspect turn with a natural beat: show a "typing…" indicator for a short,
+  length-scaled pause, then print the line. Clicking / Space fast-forwards
+  straight through the pause. Keeps the whole flow feeling like a live line.
+*/
+let _pendingReply = null; // set while the typing indicator is up (skippable)
+
+function suspectSpeaks(text, reaction, done) {
+  const typing = addTypingIndicator();
+  dom.log.classList.add('printing');
+  dom.skipHint.classList.add('show');
+
+  const reveal = () => {
+    if (!_pendingReply) return;
+    clearTimeout(_pendingReply.timer);
+    _pendingReply = null;
+    typing.remove();
+    addSuspectMsg(text, reaction, done);
+  };
+
+  // short read-time pause; longer lines "take longer to say", capped so it never drags
+  const wait = 480 + Math.min(900, (text ? text.length : 0) * 7);
+  _pendingReply = { timer: setTimeout(reveal, wait), reveal };
+}
+
+/* Transient bubble with animated dots while the suspect "composes" a reply. */
+function addTypingIndicator() {
+  const name = State.scenario ? State.scenario.subject : 'Subject';
+  const m = document.createElement('div');
+  m.className = 'msg suspect typing';
+  m.innerHTML = `<div class="avatar">${initials(name)}</div>
+    <div class="bubble">
+      <div class="who">${name}</div>
+      <div class="body"><span class="typing-dots"><span></span><span></span><span></span></span></div>
+    </div>`;
+  dom.log.appendChild(m);
+  scrollLog();
+  return m;
+}
+
+/*
+  Suspect message with optional physical reaction line + typewriter effect.
+  Calls `done()` once the typewriter finishes so the flow stays sequential.
+*/
+function addSuspectMsg(text, reaction, done) {
+  const m = document.createElement('div');
+  m.className = 'msg suspect';
+  const name = State.scenario ? State.scenario.subject : 'Subject';
+
+  const reactionHTML = reaction ? `<div class="reaction">${reaction}</div>` : '';
+  // delta chips (only if we have a pending delta from a just-made choice)
+  let chipsHTML = '';
+  if (State._lastDelta) {
+    const { dThreat, dRapport } = State._lastDelta;
+    const chips = [];
+    if (dThreat)  chips.push(deltaChip('threat', dThreat));
+    if (dRapport) chips.push(deltaChip('trust', dRapport));
+    if (chips.length) chipsHTML = `<div class="delta-chips">${chips.join('')}</div>`;
+    State._lastDelta = null;
+  }
+
+  m.innerHTML = `<div class="avatar">${initials(name)}</div>
+    <div class="bubble">
+      <div class="who">${name}</div>
+      ${reactionHTML}
+      <div class="body"><span class="tw typewriter-cursor"></span></div>
+      ${chipsHTML}
+    </div>`;
+  dom.log.appendChild(m);
+  scrollLog();
+
+  const target = m.querySelector('.tw');
+  typewrite(target, text, () => {
+    target.classList.remove('typewriter-cursor');
+    scrollLog();
+    if (typeof done === 'function') done();
+  });
+}
+
+function deltaChip(kind, delta) {
+  const up = delta > 0;
+  const arrow = up ? '▲' : '▼';
+  const val = Math.abs(delta);
+  if (kind === 'threat') {
+    const cls = up ? 'up-threat' : 'down-threat';
+    return `<span class="delta-chip ${cls}">THREAT ${arrow}${val}</span>`;
+  } else {
+    const cls = up ? 'up-trust' : 'down-trust';
+    return `<span class="delta-chip ${cls}">TRUST ${arrow}${val}</span>`;
+  }
+}
+
+function initials(name) {
+  return name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+}
+
+/* ------------------------------------------------------------------
+   TYPING SOUND: synthesized key "ticks" (Web Audio, no asset files).
+   A short decaying noise burst per character, throttled + skipping
+   spaces so it reads as natural key taps rather than a buzz.
+   ------------------------------------------------------------------ */
+let _audioCtx = null;
+let _noiseBuf = null;
+let _soundOn  = true;
+let _lastClickAt = 0;
+
+/* Lazily create / resume the audio context. Must be called from a user
+   gesture (click / keypress) so the browser allows sound to play. */
+function ensureAudio() {
+  try {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  } catch (e) { _audioCtx = null; }
+  return _audioCtx;
+}
+
+/* One reusable buffer of short, fast-decaying white noise = a key "tick". */
+function keyNoise(ctx) {
+  if (_noiseBuf) return _noiseBuf;
+  const dur = 0.03;
+  const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) {
+    d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
+  }
+  _noiseBuf = buf;
+  return buf;
+}
+
+/*
+  A single keystroke = two layered parts, like a real mechanical key:
+   1) a bright, very short "click" transient (bandpassed noise), and
+   2) a lower "thock" body (a quick pitch-dropping sine = keycap/plate).
+  Each is shaped with its own envelope and randomised a little so no two
+  taps sound identical (which is what makes real typing feel organic).
+*/
+function playKeyClick() {
+  const ctx = _audioCtx;
+  if (!ctx || ctx.state !== 'running') return;
+  const now = ctx.currentTime;
+
+  const master = ctx.createGain();
+  master.gain.value = 1.5;
+  master.connect(ctx.destination);
+
+  // 1) click transient — sharp, bright, decays in ~20ms
+  const click = ctx.createBufferSource();
+  click.buffer = keyNoise(ctx);
+  const bp = ctx.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.frequency.value = 1700 + Math.random() * 1000;
+  bp.Q.value = 0.7;
+  const cg = ctx.createGain();
+  const cv = 0.016 + Math.random() * 0.012;
+  cg.gain.setValueAtTime(cv, now);
+  cg.gain.exponentialRampToValueAtTime(0.0001, now + 0.018);
+  click.connect(bp); bp.connect(cg); cg.connect(master);
+  click.start(now);
+  click.stop(now + 0.03);
+
+  // 2) thock body — low, soft, gives the tap weight
+  const body = ctx.createOscillator();
+  body.type = 'sine';
+  const f0 = 150 + Math.random() * 70;
+  body.frequency.setValueAtTime(f0, now);
+  body.frequency.exponentialRampToValueAtTime(f0 * 0.6, now + 0.05);
+  const bg = ctx.createGain();
+  const bv = 0.014 + Math.random() * 0.009;
+  bg.gain.setValueAtTime(0.0001, now);
+  bg.gain.exponentialRampToValueAtTime(bv, now + 0.003);
+  bg.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+  body.connect(bg); bg.connect(master);
+  body.start(now);
+  body.stop(now + 0.06);
+}
+
+/* Throttled tick used by the typewriter (skips spaces / line breaks). */
+function typeTick(ch) {
+  if (!_soundOn || !_audioCtx) return;
+  if (ch === ' ' || ch === '\n') return;
+  const t = _audioCtx.currentTime;
+  if (t - _lastClickAt < 0.045) return; // cap the rate so it doesn't buzz
+  _lastClickAt = t;
+  playKeyClick();
+}
+
+/* ------------------------------------------------------------------
+   TYPEWRITER effect (variable speed, respects punctuation)
+   ------------------------------------------------------------------ */
+let _twTimer = null;
+let _twFinish = null; // when set, a typewriter is printing and can be skipped
+
+function typewrite(node, text, done) {
+  let i = 0;
+  node.textContent = '';
+  clearTimeout(_twTimer);
+  const speed = 14; // ms base
+
+  // mark "printing" state so the log is clickable-to-skip
+  dom.log.classList.add('printing');
+  dom.skipHint.classList.add('show');
+
+  let finished = false;
+  function complete() {
+    if (finished) return;
+    finished = true;
+    clearTimeout(_twTimer);
+    node.textContent = text;              // ensure full text
+    dom.log.classList.remove('printing');
+    dom.skipHint.classList.remove('show');
+    _twFinish = null;
+    scrollLog();
+    if (typeof done === 'function') done();
+  }
+  _twFinish = complete; // exposed so a click / keypress can fast-forward
+
+  function step() {
+    if (i >= text.length) { complete(); return; }
+    const ch = text[i];
+    node.textContent += ch;
+    i++;
+    typeTick(ch);
+    scrollLog();
+    // slow down slightly on punctuation for tension
+    let delay = speed;
+    if ('.!?'.includes(ch)) delay = speed * 9;
+    else if (',;'.includes(ch)) delay = speed * 5;
+    _twTimer = setTimeout(step, delay);
+  }
+  step();
+}
+
+/* Fast-forward the current beat: skip the "typing…" pause, else the typewriter. */
+function skipTypewriter() {
+  if (_pendingReply) { _pendingReply.reveal(); return; }
+  if (_twFinish) _twFinish();
+}
+
+function scrollLog() { dom.log.scrollTop = dom.log.scrollHeight; }
+
+function disableChoices() {
+  State.currentChoices = null; // stop keyboard selection mid-beat
+  [...dom.choices.querySelectorAll('.choice')].forEach(b => b.disabled = true);
+}
+
+/* ------------------------------------------------------------------
+   FEEDBACK JUICE: threat spike shake + red flash
+   ------------------------------------------------------------------ */
+function triggerThreatSpike() {
+  dom.app.classList.remove('shake');
+  void dom.app.offsetWidth; // reflow to restart animation
+  dom.app.classList.add('shake');
+
+  document.body.classList.remove('flash-red');
+  void document.body.offsetWidth;
+  document.body.classList.add('flash-red');
+  setTimeout(() => document.body.classList.remove('flash-red'), 600);
+}
+
+/* ------------------------------------------------------------------
+   END GAME: resolve ending object, render end screen
+   ------------------------------------------------------------------ */
+function endGame(endKey) {
+  if (State.ended) return;
+  State.ended = true;
+
+  const sc = State.scenario;
+  const ending = sc.endings[endKey] || sc.endings['LOSE:timeout'];
+  const isWin = endKey === 'WIN';
+
+  // small delay so player reads the final suspect line
+  setTimeout(() => {
+    dom.endBox.className = 'end-screen ' + (isWin ? 'win' : 'lose');
+    dom.endVerdict.textContent = ending.verdict;
+    dom.endTitle.textContent = ending.title;
+    dom.endText.textContent = ending.text;
+
+    dom.endStats.innerHTML = `
+      <div class="end-stat">
+        <div class="n" style="color:var(--threat)">${Math.round(State.threat)}%</div>
+        <div class="l">Final Threat</div>
+      </div>
+      <div class="end-stat">
+        <div class="n" style="color:var(--trust)">${Math.round(State.rapport)}%</div>
+        <div class="l">Final Trust</div>
+      </div>
+      <div class="end-stat">
+        <div class="n" style="color:var(--amber)">${State.turnsLeft}</div>
+        <div class="l">Turns Left</div>
+      </div>
+    `;
+    showScreen('end');
+  }, 900);
+}
+
+/* ------------------------------------------------------------------
+   SCREEN switching
+   ------------------------------------------------------------------ */
+function showScreen(which) {
+  dom.menu.classList.toggle('hidden', which !== 'menu');
+  dom.game.classList.toggle('hidden', which !== 'game');
+  dom.end.classList.toggle('hidden', which !== 'end');
+  if (which === 'menu') dom.clockLabel.textContent = 'Ready';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ------------------------------------------------------------------
+   WIRING
+   ------------------------------------------------------------------ */
+/* Return to the menu from anywhere, cleaning up any in-progress turn. */
+function goHome() {
+  clearTimeout(_twTimer);
+  _twFinish = null;
+  if (_pendingReply) { clearTimeout(_pendingReply.timer); _pendingReply = null; }
+  dom.log.classList.remove('printing');
+  dom.skipHint.classList.remove('show');
+  State.ended = true;
+  State._resolving = false;
+  State.currentChoices = null;
+  showScreen('menu');
+}
+
+dom.abort.addEventListener('click', goHome);
+dom.home.addEventListener('click', goHome);  // top-bar brand → menu
+dom.ret.addEventListener('click', goHome);
+dom.retry.addEventListener('click', () => {
+  if (State.scenario) startScenario(State.scenario.id);
+});
+
+/* Toggle the typing sound on/off. */
+dom.soundToggle.addEventListener('click', () => {
+  _soundOn = !_soundOn;
+  if (_soundOn) ensureAudio();
+  dom.soundToggle.textContent = _soundOn ? '🔊' : '🔇';
+  dom.soundToggle.classList.toggle('off', !_soundOn);
+});
+
+/* Click the log to fast-forward the suspect's dialogue. */
+dom.log.addEventListener('click', skipTypewriter);
+
+/* Keyboard: number keys pick a choice; Space/Enter skips the typewriter. */
+document.addEventListener('keydown', (e) => {
+  // Only act on the game screen.
+  if (dom.game.classList.contains('hidden')) return;
+
+  // Space / Enter fast-forward the typing pause or printing text.
+  if ((e.key === ' ' || e.key === 'Enter') && (_twFinish || _pendingReply)) {
+    e.preventDefault();
+    skipTypewriter();
+    return;
+  }
+
+  // Number keys 1-4 select the matching choice, if choices are live.
+  const n = parseInt(e.key, 10);
+  if (!isNaN(n) && State.currentChoices && n >= 1 && n <= State.currentChoices.length) {
+    e.preventDefault();
+    selectChoice(State.currentChoices[n - 1]);
+  }
+});
+
+/* boot */
+renderMenu();
+showScreen('menu');
+</script>
+</body>
+</html>
