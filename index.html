@@ -45,17 +45,21 @@
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  html, body { height: 100%; }
+  /* Only clip the horizontal axis on <html>, and let the page scroll
+     naturally. Putting overflow-x on <body> together with height:100%
+     turned <body> into a fixed viewport-height scroll box, which breaks
+     normal page scrolling on mobile. */
+  html { overflow-x: hidden; }
 
   body {
+    min-height: 100vh;
     background:
       radial-gradient(1200px 800px at 50% -20%, #151b28 0%, transparent 60%),
       var(--bg-deep);
-    background-attachment: fixed;
+    background-repeat: no-repeat;
     color: var(--text);
     font-family: var(--sans);
     line-height: 1.6;
-    overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -516,6 +520,8 @@
   .log {
     height: 340px;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;   /* momentum scroll on iOS */
+    overscroll-behavior: contain;        /* scroll the page once the log hits its end */
     padding: 6px 14px 6px 6px;
     display: flex; flex-direction: column; gap: 14px;
   }
@@ -786,6 +792,19 @@
     animation: redFlash 0.45s ease;
   }
   @keyframes redFlash { 0%{opacity:0.12;} 100%{opacity:0;} }
+
+  /* ============================================================
+     MOBILE OVERRIDES (kept at the end so they win over the base
+     rules above, which share the same specificity)
+     ============================================================ */
+  @media (max-width: 900px) {
+    /* A sticky sidebar while stacked pins the meters over the chat as
+       you scroll — that overlap is what "broke" scrolling on phones. */
+    .sidebar { position: static; top: auto; }
+    /* Let the dialogue log grow with the page instead of being a tall
+       fixed scroll box in the middle that traps the touch gesture. */
+    .log { height: auto; max-height: 55vh; }
+  }
 </style>
 </head>
 <body>
